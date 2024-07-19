@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "fabricclientaio"
+version = "0.1.0"
+description = ""
+authors = ["Austin M. Reppert <austinmreppert@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+azure-identity = "^1.17.1"
+aiohttp = "^3.9.5"
+pydantic = "^2.8.2"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.5.2"
+
+[tool.ruff.lint]
+select = ["ALL"]
+
+[tool.ruff]
+line-length = 120
+
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
