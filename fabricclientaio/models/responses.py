@@ -78,3 +78,38 @@ class ItemType(str, Enum):
     semantic_model = "SemanticModel"
     spark_job_definition = "SparkJobDefinition"
     warehouse = "Warehouse"
+
+
+class ErrorRelatedResource(BaseModel):
+    resouce_id: str = Field(alias="resourceId")
+    resource_type: str = Field(alias="resourceType")
+
+class ErrorResponseDetails(BaseModel):
+    error_code: str = Field(alias="errorCode")
+    message: str
+    related_resource: str = Field(alias="relatedResource")
+
+class ErrorResponse(BaseModel):
+    error_code: str = Field(alias="errorCode")
+    message: str
+    more_details: list[ErrorResponseDetails] = Field(alias="moreDetails")
+    related_resource: ErrorRelatedResource = Field(alias="relatedResource")
+    request_id: str = Field(alias="requestId")
+
+class LongRunningOperationStatus(str, Enum):
+    failed = "Failed"
+    not_started = "NotStarted"
+    running = "Running"
+    succeeded = "Succeeded"
+    undefined = "Undefined"
+
+class OperationState(BaseModel):
+    created_time_utc: str = Field(alias="createdTimeUtc")
+    error: ErrorResponse | None = Field(default=None)
+    last_updated_time_utc: str = Field(alias="lastUpdatedTimeUtc")
+    percent_complete: int = Field(alias="percentComplete")
+    status: LongRunningOperationStatus
+
+    def is_completed(self) -> bool:
+        """Check if the operation is completed."""
+        return self.status in (LongRunningOperationStatus.succeeded, LongRunningOperationStatus.failed)

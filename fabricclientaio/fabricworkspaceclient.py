@@ -67,4 +67,30 @@ class FabricWorkspaceClient:
             for item in items.value:
                 yield item
 
+    async def get_item_definition(self, item_id: str, output_format: str | None = None) -> dict:
+        """Get Item Definition.
+
+        Retrieves the item definition from the Fabric API.
+
+        https://learn.microsoft.com/en-us/rest/api/fabric/core/items/get-item-definition
+
+        Parameters
+        ----------
+        item_id : str
+            The item id.
+        output_format : str, optional
+            The output format. Supported options: ipynb
+
+        Returns
+        -------
+        dict
+            The item definition.
+
+        """
+        url = f"{self._fabric_client.base_url}/workspaces/{self._workspace_id}/items/{item_id}/getDefinition"
+        params: dict[str, str] = {}
+        if output_format:
+            params["format"] = output_format
+        return await self._fabric_client.get_long_running_job(url, params=params)
+
 
