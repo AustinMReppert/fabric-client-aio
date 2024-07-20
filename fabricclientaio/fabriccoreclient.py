@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, AsyncGenerator
 
-import aiohttp
-
 from fabricclientaio.models.responses import Workspace, Workspaces
 
 if TYPE_CHECKING:
@@ -44,19 +42,8 @@ class FabricCoreClient:
         params: dict[str, str] = {}
         if roles:
             params["roles"] = ",".join(roles)
-        headers = await self._fabric_client.get_auth_headers()
 
-        has_next_page = True
-
-        while has_next_page:
-            async with aiohttp.ClientSession() as session, session.get(url, params=params, headers=headers) as response:
-                response.raise_for_status()
-                data = await response.json()
-                workspaces = Workspaces(**data)
-                for workspace in workspaces.value:
-                    yield workspace
-                if workspaces.continuation_uri and workspaces.continuation_token:
-                    url = workspaces.continuation_uri
-                    params = {"continuationToken": workspaces.continuation_token}
-                else:
-                    has_next_page = False
+        async for workspaces_json in self._fabric_client.get_paged(url, params=params):
+            workspaces = Workspaces(**workspaces_json)
+            for workspace in workspaces.value:
+                yield workspace

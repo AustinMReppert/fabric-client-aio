@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, AsyncGenerator
+
+import aiohttp
 
 from fabricclientaio.utils.timeutils import get_current_unix_timestamp
 
@@ -77,3 +79,67 @@ class FabricClient:
         """
         token = await self._get_token()
         return {"Authorization": f"Bearer {token}"}
+
+
+    async def get(self, url: str, params: dict[str, str] | None = None, headers: dict[str, str] | None = None) -> dict:
+        """Make a GET request to the Fabric API.
+
+        Parameters
+        ----------
+        url : str
+            The URL to make the request to.
+        params : dict[str, str], optional
+            The parameters to include in the request.
+        headers : dict[str, str], optional
+            The headers to include in the request.
+
+        Returns
+        -------
+        dict
+            The response from the request.
+
+        """
+        headers = headers.copy() if headers is not None else {}
+
+        if "Authorization" not in headers:
+            headers = await self.get_auth_headers()
+
+        async with aiohttp.ClientSession() as session, session.get(url, params=params, headers=headers) as response:
+            response.raise_for_status()
+            return await response.json()
+
+
+    async def get_paged(
+        self,
+        url: str,
+        params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> AsyncGenerator[dict, None]:
+        """Make a GET request to the Fabric API that returns paged results.
+
+        Parameters
+        ----------
+        url : str
+            The URL to make the request to.
+        params : dict[str, str], optional
+            The parameters to include in the request.
+        headers : dict[str, str], optional
+            The headers to include in the request.
+
+        Yields
+        ------
+        dict
+            The response from the request.
+
+        """
+        has_next_page = True
+
+        while has_next_page:
+            data = await self.get(url, params, headers)
+            yield data
+
+            if "continuationUri" in data and "continuationToken" in data:
+                url = data["continuationUri"]
+                params = {"continuationToken": data["continuationToken"]}
+            else:
+                has_next_page = False

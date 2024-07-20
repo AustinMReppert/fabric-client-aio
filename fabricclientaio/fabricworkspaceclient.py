@@ -3,8 +3,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, AsyncGenerator
 
-import aiohttp
-
 from fabricclientaio.models.responses import Item, Items, WorkspaceInfo
 
 if TYPE_CHECKING:
@@ -36,12 +34,9 @@ class FabricWorkspaceClient:
 
         """
         url = f"{self._fabric_client.base_url}/workspaces/{self._workspace_id}"
-        headers = await self._fabric_client.get_auth_headers()
 
-        async with aiohttp.ClientSession() as session, session.get(url, headers=headers) as response:
-            response.raise_for_status()
-            data = await response.json()
-            return WorkspaceInfo(**data)
+        workspace_json = await self._fabric_client.get(url)
+        return WorkspaceInfo(**workspace_json)
 
 
     async def get_items(self, item_type: str | None = None) -> AsyncGenerator[Item, None]:
@@ -66,21 +61,10 @@ class FabricWorkspaceClient:
         params: dict[str, str] = {}
         if item_type:
             params["type"] = item_type
-        headers = await self._fabric_client.get_auth_headers()
 
-        has_next_page = True
-
-        while has_next_page:
-            async with aiohttp.ClientSession() as session, session.get(url, params=params, headers=headers) as response:
-                response.raise_for_status()
-                data = await response.json()
-                items = Items(**data)
-                for workspace in items.value:
-                    yield workspace
-                if items.continuation_uri and items.continuation_token:
-                    url = items.continuation_uri
-                    params = {"continuationToken": items.continuation_token}
-                else:
-                    has_next_page = False
+        async for items_json in self._fabric_client.get_paged(url, params):
+            items = Items(**items_json)
+            for item in items.value:
+                yield item
 
 
