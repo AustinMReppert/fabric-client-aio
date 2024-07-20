@@ -1,5 +1,9 @@
+"""Response models for the Fabric API."""
+
 from __future__ import annotations
+
 from enum import Enum
+
 from pydantic import BaseModel, Field
 
 

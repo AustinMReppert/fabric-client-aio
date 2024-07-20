@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, AsyncGenerator
 
 import aiohttp
 
-from fabricclientaio.models.responses import ErrorResponse, LongRunningOperationStatus, OperationState
-from fabricclientaio.utils.error import FabricClientError
+from fabricclientaio.error import FabricClientError
+from fabricclientaio.models.responses import ErrorResponse, OperationState
 from fabricclientaio.utils.timeutils import get_current_unix_timestamp
 
 if TYPE_CHECKING:
@@ -204,7 +204,7 @@ class FabricClient:
 
                     if response.status != STATUS_ACCEPTED:
                         raise FabricClientError(ErrorResponse(**await response_json))
-                    
+
                     _operation_id = response.headers["x-ms-operation-id"]
                     retry_after: int = int(response.headers["Retry-After"])
                     location = response.headers["Location"]
