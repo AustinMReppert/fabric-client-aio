@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, AsyncGenerator
 
-from fabricclientaio.models.responses import Item, Items, WorkspaceInfo
+from fabricclientaio.models.responses import GitStatusResponse, Item, Items, WorkspaceInfo
 
 if TYPE_CHECKING:
     from fabricclientaio.fabricclient import FabricClient
@@ -91,6 +91,20 @@ class FabricWorkspaceClient:
         params: dict[str, str] = {}
         if output_format:
             params["format"] = output_format
-        return await self._fabric_client.get_long_running_job(url, params=params)
+        return await self._fabric_client.get_long_running_job(url, params=params, post=True)
+
+
+    async def get_status(self) -> GitStatusResponse:
+        """Get the status of the workspace.
+
+        Returns
+        -------
+        GitStatusResponse
+            The status of the workspace.
+
+        """
+        url = f"{self._fabric_client.base_url}/workspaces/{self._workspace_id}/git/status"
+        status_json = await self._fabric_client.get_long_running_job(url)
+        return GitStatusResponse(**status_json)
 
 

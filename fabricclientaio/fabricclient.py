@@ -150,6 +150,7 @@ class FabricClient:
         url: str,
         params: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
+        post: bool = False,
     ) -> dict:
         """Make a GET request to the Fabric API for a long running job.
 
@@ -173,10 +174,16 @@ class FabricClient:
         if "Authorization" not in headers:
             headers = await self.get_auth_headers()
 
-        async with aiohttp.ClientSession() as session, session.post(url, params=params, headers=headers) as response:
-            response.raise_for_status()
-            if response.status == 200:
-                return await response.json()
+        if post:
+            async with aiohttp.ClientSession() as session, session.post(url, params=params, headers=headers) as response:
+                response.raise_for_status()
+                if response.status == 200:
+                    return await response.json()
+        else:
+            async with aiohttp.ClientSession() as session, session.get(url, params=params, headers=headers) as response:
+                response.raise_for_status()
+                if response.status == 200:
+                    return await response.json()
 
         if response.status != 202:
             raise Exception(f"Failed to get long running job: {response.status}")

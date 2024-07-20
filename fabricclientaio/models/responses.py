@@ -72,6 +72,7 @@ class ItemType(str, Enum):
     ml_model = "MLModel"
     mirrored_warehouse = "MirroredWarehouse"
     notebook = "Notebook"
+    synapse_notebook = "SynapseNotebook"
     paginated_report = "PaginatedReport"
     report = "Report"
     sql_endpoint = "SQLEndpoint"
@@ -113,3 +114,37 @@ class OperationState(BaseModel):
     def is_completed(self) -> bool:
         """Check if the operation is completed."""
         return self.status in (LongRunningOperationStatus.succeeded, LongRunningOperationStatus.failed)
+
+class GitStatusResponse(BaseModel):
+    changes: list[ItemChange]
+    remote_commit_hash: str = Field(alias="remoteCommitHash")
+    workspace_head: str = Field(alias="workspaceHead")
+
+class ConflictType(str, Enum):
+    conflict = "Conflict"
+    none = "None"
+    same_changes = "SameChanges"
+
+class ItemIdentifier(BaseModel):
+    logical_id: str = Field(alias="logicalId")
+    object_id: str = Field(alias="objectId")
+
+class ItemMetadata(BaseModel):
+    display_name: str = Field(alias="displayName")
+    item_identifier: ItemIdentifier = Field(alias="itemIdentifier")
+    item_type: ItemType = Field(alias="itemType")
+
+class ItemChangeType(BaseModel):
+    conflict_type: ConflictType = Field(alias="conflictType")
+    item_metadata: ItemMetadata
+
+class ChangeType(str, Enum):
+    added = "Added"
+    deleted = "Deleted"
+    modified = "Modified"
+
+class ItemChange(BaseModel):
+    conflict_type: ConflictType = Field(alias="conflictType")
+    item_metadata: ItemMetadata = Field(alias="itemMetadata")
+    remote_change: ChangeType | None = Field(alias="remoteChange")
+    workspace_change: ChangeType | None = Field(alias="workspaceChange")
