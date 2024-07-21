@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, AsyncGenerator
 
-from fabricclientaio.models.responses import GitStatusResponse, Item, Items, WorkspaceInfo
+from fabricclientaio.models.responses import GitStatusResponse, Item, ItemJobInstance, Items, WorkspaceInfo
 
 if TYPE_CHECKING:
     from fabricclientaio.fabricclient import FabricClient
@@ -108,3 +108,88 @@ class FabricWorkspaceClient:
         return GitStatusResponse(**status_json)
 
 
+    async def run_on_demand_item_job(
+            self,
+            item_id: str,
+            job_type: str | None = None,
+            execution_data: dict | None = None
+        ) -> ItemJobInstance:
+        """Run an on-demand item job.
+
+        https://learn.microsoft.com/en-us/rest/api/fabric/core/items/run-on-demand-item-job
+
+        Parameters
+        ----------
+        item_id : str
+            The item id.
+        job_type : str, optional
+            The job type.
+        execution_data : dict, optional
+            Data specific to the job type.
+
+        Returns
+        -------
+        dict
+            The job response.
+
+        """
+        url = f"{self._fabric_client.base_url}/workspaces/{self._workspace_id}/items/{item_id}/jobs/instances"
+        params: dict[str, str] = {}
+        if job_type:
+            params["jobType"] = job_type
+        else:
+            params["jobType"] = "DefaultJob"
+        response_json = await self._fabric_client.get_long_running_job(url, params=params, post=True, body=execution_data)
+        return ItemJobInstance(**response_json)
+
+
+    async def get_item_job_instance(self, item_id: str, job_instance_id: str) -> ItemJobInstance:
+        """Get an item job instance.
+
+        https://learn.microsoft.com/en-us/rest/api/fabric/core/items/get-item-job-instance
+
+        Parameters
+        ----------
+        item_id : str
+            The item id.
+        job_instance_id : str
+            The job instance id.
+
+        Returns
+        -------
+        dict
+            The job instance response.
+
+        """
+        url = (
+            f"{self._fabric_client.base_url}/workspaces/{self._workspace_id}/items/"
+            f"{item_id}/jobs/instances/{job_instance_id}"
+        )
+        response_json = await self._fabric_client.get(url)
+        return ItemJobInstance(**response_json)
+
+
+    async def cancel_item_job_instance(self, item_id: str, job_instance_id: str) -> ItemJobInstance:
+        """Cancel an item job instance.
+
+        https://learn.microsoft.com/en-us/rest/api/fabric/core/items/cancel-item-job-instance
+
+        Parameters
+        ----------
+        item_id : str
+            The item id.
+        job_instance_id : str
+            The job instance id.
+
+        Returns
+        -------
+        dict
+            The job instance response.
+
+        """
+        url = (
+            f"{self._fabric_client.base_url}/workspaces/{self._workspace_id}/items/"
+            f"{item_id}/jobs/instances/{job_instance_id}/cancel"
+        )
+        response_json = await self._fabric_client.get_long_running_job(url, post=True)
+        return ItemJobInstance(**response_json)

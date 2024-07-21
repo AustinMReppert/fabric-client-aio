@@ -85,6 +85,47 @@ class FabricClient:
         return {"Authorization": f"Bearer {token}"}
 
 
+    async def post(
+            self,
+            url: str,
+            params: dict[str, str] | None = None,
+            headers: dict[str, str] | None = None,
+            body: dict | None = None,
+        ) -> dict:
+        """Make a POST request to the Fabric API.
+
+        Parameters
+        ----------
+        url : str
+            The URL to make the request to.
+        params : dict[str, str], optional
+            The parameters to include in the request.
+        headers : dict[str, str], optional
+            The headers to include in the request.
+        body : dict, optional
+            The body to include in the request.
+
+        Returns
+        -------
+        dict
+            The response from the request.
+
+        """
+        headers = headers.copy() if headers is not None else {}
+
+        if "Authorization" not in headers:
+            headers["Authorization"] = (await self.get_auth_headers())["Authorization"]
+
+        async with aiohttp.ClientSession() as session, \
+                session.post(url, params=params, headers=headers, data=body) as response:
+            if response.content_length == 0:
+                response_json = {}
+            else:
+                response_json = await response.json()
+            if response.status != STATUS_OK:
+                raise FabricClientError(response.status, ErrorResponse(**response_json))
+            return response_json
+
     async def get(self, url: str, params: dict[str, str] | None = None, headers: dict[str, str] | None = None) -> dict:
         """Make a GET request to the Fabric API.
 
@@ -109,9 +150,12 @@ class FabricClient:
             headers["Authorization"] = (await self.get_auth_headers())["Authorization"]
 
         async with aiohttp.ClientSession() as session, session.get(url, params=params, headers=headers) as response:
-            response_json = await response.json()
+            if response.content_length == 0:
+                response_json = {}
+            else:
+                response_json = await response.json()
             if response.status != STATUS_OK:
-                raise FabricClientError(ErrorResponse(**response_json))
+                raise FabricClientError(response.status, ErrorResponse(**response_json))
             return response_json
 
 
@@ -150,12 +194,14 @@ class FabricClient:
             else:
                 has_next_page = False
 
+
     async def get_long_running_job(
         self,
         url: str,
         params: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
         post: bool = False,
+        body: dict | None = None,
     ) -> dict:
         """Make a GET request to the Fabric API for a long running job.
 
@@ -169,6 +215,8 @@ class FabricClient:
             The headers to include in the request.
         post : bool, optional
             If true do a POST request otherwise do a GET request, by default False.
+        body : dict, optional
+            The body if doing a POST request, by default None.
 
         Returns
         -------
@@ -181,32 +229,42 @@ class FabricClient:
         if "Authorization" not in headers:
             headers["Authorization"] = (await self.get_auth_headers())["Authorization"]
 
+        headers["Content-Type"] = "application/json"
+
         async with aiohttp.ClientSession(headers=headers) as session:
             if post:
-                async with session.post(url, params=params) as response:
-                    response_json = await response.json()
+                async with session.post(url, params=params, data=body) as response:
+                    if response.content_length == 0:
+                        response_json = {}
+                    else:
+                        response_json = await response.json()
 
                     if response.status == STATUS_OK:
                         return response_json
 
                     if response.status != STATUS_ACCEPTED:
-                        raise FabricClientError(ErrorResponse(**await response_json))
+                        raise FabricClientError(response.status, ErrorResponse(**response_json))
 
-                    _operation_id = response.headers["x-ms-operation-id"]
-                    retry_after: int = int(response.headers["Retry-After"])
+                    # Not all long running operations have an operation id.
+                    _operation_id = response.headers.get("x-ms-operation-id")
+                    retry_after = int(response.headers["Retry-After"])
                     location = response.headers["Location"]
             else:
                 async with session.get(url, params=params) as response:
-                    response_json = await response.json()
+                    if response.content_length == 0:
+                        response_json = {}
+                    else:
+                        response_json = await response.json()
 
                     if response.status == STATUS_OK:
                         return response_json
 
                     if response.status != STATUS_ACCEPTED:
-                        raise FabricClientError(ErrorResponse(**await response_json))
+                        raise FabricClientError(response.status, ErrorResponse(**response_json))
 
-                    _operation_id = response.headers["x-ms-operation-id"]
-                    retry_after: int = int(response.headers["Retry-After"])
+                    # Not all long running operations have an operation id.
+                    _operation_id = response.headers.get("x-ms-operation-id")
+                    retry_after = int(response.headers["Retry-After"])
                     location = response.headers["Location"]
 
         is_waiting = True
@@ -215,10 +273,13 @@ class FabricClient:
             async with aiohttp.ClientSession(headers=headers) as session, session.get(url=location) as response:
                 response_json = await response.json()
                 if response.status != STATUS_OK:
-                    raise FabricClientError(ErrorResponse(**response_json))
+                    raise FabricClientError(response.status, ErrorResponse(**response_json))
 
-                retry_after = int(response.headers.get("Retry-After", "5"))
+                if "Location" not in response.headers:
+                    return response_json
+
                 location = response.headers["Location"]
+                retry_after = int(response.headers.get("Retry-After", "5"))
 
                 operation_result = OperationState(**response_json)
                 if operation_result.is_completed():

@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 class WorkspaceType(str, Enum):
@@ -95,11 +99,11 @@ class ErrorResponseDetails(BaseModel):
     related_resource: str = Field(alias="relatedResource")
 
 class ErrorResponse(BaseModel):
-    error_code: str = Field(alias="errorCode")
-    message: str
-    more_details: list[ErrorResponseDetails] = Field(alias="moreDetails")
-    related_resource: ErrorRelatedResource = Field(alias="relatedResource")
-    request_id: str = Field(alias="requestId")
+    error_code: str | None = Field(default=None, alias="errorCode")
+    message: str | None = Field(default=None)
+    more_details: list[ErrorResponseDetails] = Field(default=[], alias="moreDetails")
+    related_resource: ErrorRelatedResource | None = Field(default=None, alias="relatedResource")
+    request_id: str | None = Field(default=None, alias="requestId")
 
 class LongRunningOperationStatus(str, Enum):
     failed = "Failed"
@@ -152,3 +156,26 @@ class ItemChange(BaseModel):
     item_metadata: ItemMetadata = Field(alias="itemMetadata")
     remote_change: ChangeType | None = Field(alias="remoteChange")
     workspace_change: ChangeType | None = Field(alias="workspaceChange")
+
+class InvokeType(str, Enum):
+    manual = "Manual"
+    scheduled = "Scheduled"
+
+class Status(str, Enum):
+    cancelled = "Cancelled"
+    completed = "Completed"
+    deduped = "Deduped"
+    failed = "Failed"
+    in_progress = "InProgress"
+    not_started = "NotStarted"
+
+class ItemJobInstance(BaseModel):
+    id: str
+    item_id: str = Field(alias="itemId")
+    job_type: str = Field(alias="jobType")
+    invoke_type: str = Field(alias="invokeType")
+    status: Status
+    failure_reason: str | None = Field(default=None, alias="failureReason")
+    root_activity_id: str = Field(alias="rootActivityId")
+    start_time_utc: datetime | None = Field(default=None, alias="startTimeUtc")
+    end_time_utc: datetime | None = Field(default=None, alias="endTimeUtc")
