@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, AsyncGenerator
 
+import json
 import aiohttp
 
 from fabricclientaio.error import FabricClientError
@@ -117,7 +118,7 @@ class FabricClient:
             headers["Authorization"] = (await self.get_auth_headers())["Authorization"]
 
         async with aiohttp.ClientSession() as session, \
-                session.post(url, params=params, headers=headers, data=body) as response:
+                session.post(url, params=params, headers=headers, data=json.dumps(body)) as response:
             if response.content_length == 0:
                 response_json = {}
             else:
@@ -233,7 +234,7 @@ class FabricClient:
 
         async with aiohttp.ClientSession(headers=headers) as session:
             if post:
-                async with session.post(url, params=params, data=body) as response:
+                async with session.post(url, params=params, data=json.dumps(body)) as response:
                     if response.content_length == 0:
                         response_json = {}
                     else:

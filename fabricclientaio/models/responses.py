@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -90,13 +90,13 @@ class ItemType(str, Enum):
 
 
 class ErrorRelatedResource(BaseModel):
-    resouce_id: str = Field(alias="resourceId")
-    resource_type: str = Field(alias="resourceType")
+    resouce_id: str | None = Field(default=None, alias="resourceId")
+    resource_type: str | None = Field(default=None, alias="resourceType")
 
 class ErrorResponseDetails(BaseModel):
-    error_code: str = Field(alias="errorCode")
-    message: str
-    related_resource: str = Field(alias="relatedResource")
+    error_code: str | None = Field(default=None, alias="errorCode")
+    message: str | None = Field(default=None)
+    related_resource: str | None = Field(default=None, alias="relatedResource")
 
 class ErrorResponse(BaseModel):
     error_code: str | None = Field(default=None, alias="errorCode")
@@ -179,3 +179,35 @@ class ItemJobInstance(BaseModel):
     root_activity_id: str = Field(alias="rootActivityId")
     start_time_utc: datetime | None = Field(default=None, alias="startTimeUtc")
     end_time_utc: datetime | None = Field(default=None, alias="endTimeUtc")
+
+class ConflictResolutionPolicy(str, Enum):
+    prefer_remote = "PreferRemote"
+    prefer_workspace = "PreferWorkspace"
+
+class ConflictResolutionType(str, Enum):
+    workspace = "Workspace"
+
+class WorkspaceConflictResolution(BaseModel):
+    conflict_resolution_policy: ConflictResolutionPolicy = Field(alias="conflictResolutionPolicy")
+    conflict_resolution_type: ConflictResolutionType = Field(alias="conflictResolutionType")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+class UpdateOptions(BaseModel):
+    allow_override_items: bool = Field(alias="allowOverrideItems")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+class UpdateFromGitRequest(BaseModel):
+    conflict_resolution: WorkspaceConflictResolution = Field(alias="conflictResolution")
+    options: UpdateOptions = Field(alias="options")
+    remote_commit_hash: str = Field(alias="remoteCommitHash")
+    workspace_head: str = Field(alias="workspaceHead")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )

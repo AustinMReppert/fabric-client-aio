@@ -3,7 +3,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, AsyncGenerator
 
-from fabricclientaio.models.responses import GitStatusResponse, Item, ItemJobInstance, Items, WorkspaceInfo
+from fabricclientaio.models.responses import (
+    GitStatusResponse,
+    Item,
+    ItemJobInstance,
+    Items,
+    OperationState,
+    UpdateFromGitRequest,
+    WorkspaceInfo,
+)
 
 if TYPE_CHECKING:
     from fabricclientaio.fabricclient import FabricClient
@@ -193,3 +201,28 @@ class FabricWorkspaceClient:
         )
         response_json = await self._fabric_client.get_long_running_job(url, post=True)
         return ItemJobInstance(**response_json)
+
+
+    async def update_from_git(self, update_request: UpdateFromGitRequest) -> OperationState:
+        """Update from Git.
+
+        https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/update-from-git
+
+        Parameters
+        ----------
+        update_request : UpdateFromGitRequest
+            The update from git request.
+
+        Returns
+        -------
+        OperationState
+            The operation state.
+
+        """
+        url = f"{self._fabric_client.base_url}/workspaces/{self._workspace_id}/git/updateFromGit"
+        response_json = await self._fabric_client.get_long_running_job(
+            url,
+            post=True,
+            body=update_request.model_dump(mode="json", by_alias=True),
+        )
+        return OperationState(**response_json)
