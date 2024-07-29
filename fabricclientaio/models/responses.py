@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import datetime  # noqa: TCH003
 from enum import Enum
-from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
-
-if TYPE_CHECKING:
-    from datetime import datetime
 
 
 class WorkspaceType(str, Enum):
